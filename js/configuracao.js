@@ -1,0 +1,1 @@
+const configuracaoBarbearia={nome:'Barbearia Prime',slogan:'Seu estilo começa na cadeira.',telefone:'(00) 00000-0000',whatsapp:'5500000000000',email:'contato@barbearia.com',endereco:'Rua Principal, 250 — Centro',cidade:'Cidade — UF',instagram:'#',facebook:'#',tiktok:'#',agendamento:'#',mapa:'#',desenvolvedor:'Sua empresa'};

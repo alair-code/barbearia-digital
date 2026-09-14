@@ -1,4 +1,4 @@
-const configuracaoBarbearia={
+window.configuracaoBarbearia={
   nome:'Barbearia Prime',
   slogan:'Seu estilo começa na cadeira.',
   descricao:'Corte, barba e estilo com atendimento profissional em um ambiente premium.',
@@ -16,8 +16,5 @@ const configuracaoBarbearia={
   mapa:'#',
   horario:'Segunda a sábado, das 09:00 às 19:00',
   desenvolvedor:'Sua empresa',
-  seo:{
-    titulo:'Barbearia Prime | Corte, Barba e Estilo',
-    palavrasChave:'barbearia, corte masculino, barba, barbeiro, estética masculina, agendamento'
-  }
+  seo:{titulo:'Barbearia Prime | Corte, Barba e Estilo',palavrasChave:'barbearia, corte masculino, barba, barbeiro, estética masculina, agendamento'}
 };

@@ -1,1 +1,23 @@
-const configuracaoBarbearia={nome:'Barbearia Prime',slogan:'Seu estilo começa na cadeira.',telefone:'(00) 00000-0000',whatsapp:'5500000000000',email:'contato@barbearia.com',endereco:'Rua Principal, 250 — Centro',cidade:'Cidade — UF',instagram:'#',facebook:'#',tiktok:'#',agendamento:'#',mapa:'#',desenvolvedor:'Sua empresa'};
+const configuracaoBarbearia={
+  nome:'Barbearia Prime',
+  slogan:'Seu estilo começa na cadeira.',
+  descricao:'Corte, barba e estilo com atendimento profissional em um ambiente premium.',
+  telefone:'(00) 00000-0000',
+  whatsapp:'5500000000000',
+  email:'contato@barbearia.com',
+  endereco:'Rua Principal, 250 — Centro',
+  cidade:'Cidade — UF',
+  estado:'UF',
+  pais:'Brasil',
+  instagram:'#',
+  facebook:'#',
+  tiktok:'#',
+  agendamento:'#',
+  mapa:'#',
+  horario:'Segunda a sábado, das 09:00 às 19:00',
+  desenvolvedor:'Sua empresa',
+  seo:{
+    titulo:'Barbearia Prime | Corte, Barba e Estilo',
+    palavrasChave:'barbearia, corte masculino, barba, barbeiro, estética masculina, agendamento'
+  }
+};

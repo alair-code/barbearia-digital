@@ -40,6 +40,13 @@ create table if not exists public.agendamentos (
   pagamento_status text not null default 'nao_solicitado' check (pagamento_status in ('nao_solicitado','aguardando_pagamento','pago','expirado','reembolsado')),
   pagamento_percentual numeric(5,2) not null default 30 check (pagamento_percentual >= 0 and pagamento_percentual <= 100),
   pagamento_valor numeric(10,2) not null default 0 check (pagamento_valor >= 0),
+  pagamento_gateway text,
+  pagamento_gateway_id text,
+  pagamento_transacao_id text,
+  pagamento_email text,
+  pagamento_criado_em timestamptz,
+  pagamento_atualizado_em timestamptz,
+  pagamento_expira_em timestamptz,
   criado_em timestamptz not null default now()
 );
 
@@ -47,6 +54,13 @@ alter table public.agendamentos add column if not exists fim timestamptz;
 alter table public.agendamentos add column if not exists pagamento_status text not null default 'nao_solicitado';
 alter table public.agendamentos add column if not exists pagamento_percentual numeric(5,2) not null default 30;
 alter table public.agendamentos add column if not exists pagamento_valor numeric(10,2) not null default 0;
+alter table public.agendamentos add column if not exists pagamento_gateway text;
+alter table public.agendamentos add column if not exists pagamento_gateway_id text;
+alter table public.agendamentos add column if not exists pagamento_transacao_id text;
+alter table public.agendamentos add column if not exists pagamento_email text;
+alter table public.agendamentos add column if not exists pagamento_criado_em timestamptz;
+alter table public.agendamentos add column if not exists pagamento_atualizado_em timestamptz;
+alter table public.agendamentos add column if not exists pagamento_expira_em timestamptz;
 
 update public.agendamentos a
 set fim = a.inicio + make_interval(mins => 15)
@@ -59,6 +73,7 @@ create index if not exists idx_agendamentos_inicio on public.agendamentos(inicio
 create index if not exists idx_agendamentos_cliente on public.agendamentos(cliente_id);
 create index if not exists idx_agendamentos_barbeiro on public.agendamentos(barbeiro_id);
 create index if not exists idx_agendamentos_pagamento_status on public.agendamentos(pagamento_status);
+create index if not exists idx_agendamentos_pagamento_gateway_id on public.agendamentos(pagamento_gateway_id);
 
 create unique index if not exists uq_agendamentos_horario_ativo
   on public.agendamentos(inicio)

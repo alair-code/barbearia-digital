@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Administração | Barbearia Digital</title>
+  <meta name="robots" content="noindex,nofollow">
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,sans-serif;margin:0;background:#f6f4f0;color:#201d19}.wrap{max-width:1100px;margin:auto;padding:32px 18px}.card{background:#fff;border:1px solid #ddd6cc;border-radius:16px;padding:20px;margin-bottom:18px;box-shadow:0 8px 28px rgba(0,0,0,.05)}input,select,button{font:inherit;padding:10px;border:1px solid #cfc7bd;border-radius:9px}button{cursor:pointer}.top{display:flex;gap:10px;flex-wrap:wrap}.status{font-size:.9rem;margin-top:10px}.erro{color:#a32929}.ok{color:#276b3b}.tabela{width:100%;border-collapse:collapse}.tabela th,.tabela td{padding:10px 8px;border-bottom:1px solid #eee;text-align:left;vertical-align:top}.acoes{display:flex;gap:6px;flex-wrap:wrap}.acoes button{font-size:.85rem}.vazio{padding:20px;text-align:center;color:#6d675f}@media(max-width:720px){.tabela{font-size:.86rem}.tabela th:nth-child(4),.tabela td:nth-child(4){display:none}.card{padding:14px}}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="card">
+      <h1>Painel administrativo</h1>
+      <p>Use o token configurado em <code>ADMIN_API_TOKEN</code>. Esta página não armazena o token.</p>
+      <div class="top"><input id="token" type="password" autocomplete="off" placeholder="Token administrativo" aria-label="Token administrativo"><button id="entrar">Entrar</button></div>
+      <div id="status" class="status" role="status"></div>
+    </div>
+    <section id="painel" hidden>
+      <div class="card"><div class="top"><select id="filtro"><option value="">Todos os status</option><option value="pendente">Pendentes</option><option value="confirmado">Confirmados</option><option value="concluido">Concluídos</option><option value="cancelado">Cancelados</option></select><button id="atualizar">Atualizar</button><button id="sair">Sair</button></div></div>
+      <div class="card"><h2>Agendamentos</h2><div id="agenda"></div></div>
+      <div class="card"><h2>Serviços cadastrados</h2><div id="servicos"></div></div>
+      <div class="card"><h2>Barbeiros cadastrados</h2><div id="barbeiros"></div></div>
+    </section>
+  </main>
+  <script src="js/admin.js"></script>
+</body>
+</html>

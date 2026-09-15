@@ -1,8 +1,16 @@
 const { neon } = require('@neondatabase/serverless');
 
 const sql = process.env.DATABASE_URL ? neon(process.env.DATABASE_URL) : null;
-const TEMPO_MEDIO_ATENDIMENTO_MINUTOS = 15;
 const PAGAMENTO_ANTECIPADO_PERCENTUAL = 30;
+const INTERVALO_MINUTOS = 15;
+const HORARIOS_ATENDIMENTO = {
+  1: { inicio: 9, fim: 19 },
+  2: { inicio: 9, fim: 19 },
+  3: { inicio: 9, fim: 19 },
+  4: { inicio: 9, fim: 19 },
+  5: { inicio: 9, fim: 20 },
+  6: { inicio: 8, fim: 18 }
+};
 
 function resposta(res, status, corpo) {
   res.status(status).json(corpo);
@@ -20,17 +28,46 @@ function emailValido(valor) {
   return !valor || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valor);
 }
 
+function partesHorario(data, timezone) {
+  try {
+    const partes = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      hour12: false,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit'
+    }).formatToParts(data);
+    return Object.fromEntries(partes.filter((p) => p.type !== 'literal').map((p) => [p.type, Number(p.value)]));
+  } catch {
+    return null;
+  }
+}
+
+function horarioDoDia(data, timezone) {
+  try {
+    const dia = new Intl.DateTimeFormat('en-US', { timeZone: timezone, weekday: 'short' }).format(data);
+    const numeroDia = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 0 }[dia];
+    return HORARIOS_ATENDIMENTO[numeroDia] || null;
+  } catch {
+    return null;
+  }
+}
+
+function resumoHorarios() {
+  return 'Segunda a quinta: 09:00–19:00; sexta: 09:00–20:00; sábado: 08:00–18:00; domingo: fechado.';
+}
+
 module.exports = async function handler(req, res) {
   if (req.method === 'GET') {
     return resposta(res, 200, {
       ok: true,
       bancoConfigurado: Boolean(process.env.DATABASE_URL),
-      tempoMedioAtendimentoMinutos: TEMPO_MEDIO_ATENDIMENTO_MINUTOS,
       pagamentoAntecipado: {
         disponivel: true,
         opcional: true,
         percentual: PAGAMENTO_ANTECIPADO_PERCENTUAL
       },
+      horarioFuncionamento: resumoHorarios(),
+      intervaloMinutos: INTERVALO_MINUTOS,
       mensagem: 'API de agendamentos disponível.'
     });
   }
@@ -76,6 +113,16 @@ module.exports = async function handler(req, res) {
       return resposta(res, 400, { ok: false, erro: 'O horário informado já passou.' });
     }
 
+    const horarioLocal = partesHorario(dataInicio, timezone);
+    const horarioDia = horarioDoDia(dataInicio, timezone);
+    if (!horarioLocal || !horarioDia) {
+      return resposta(res, 400, { ok: false, erro: 'Fuso horário ou dia de atendimento inválido.' });
+    }
+
+    if (horarioLocal.hour < horarioDia.inicio || horarioLocal.hour >= horarioDia.fim || horarioLocal.minute % INTERVALO_MINUTOS !== 0 || horarioLocal.second !== 0) {
+      return resposta(res, 400, { ok: false, erro: 'Escolha um horário dentro do funcionamento, em intervalos de 15 minutos.' });
+    }
+
     const servicoRows = await sql`
       select id, nome, duracao_minutos, preco
       from servicos
@@ -88,7 +135,14 @@ module.exports = async function handler(req, res) {
     }
 
     const servicoSelecionado = servicoRows[0];
-    const fim = new Date(dataInicio.getTime() + TEMPO_MEDIO_ATENDIMENTO_MINUTOS * 60000);
+    const duracaoMinutos = Number(servicoSelecionado.duracao_minutos) || 15;
+    const fim = new Date(dataInicio.getTime() + duracaoMinutos * 60000);
+    const horarioFimLocal = partesHorario(fim, timezone);
+
+    if (!horarioFimLocal || horarioFimLocal.hour > horarioDia.fim || (horarioFimLocal.hour === horarioDia.fim && horarioFimLocal.minute > 0)) {
+      return resposta(res, 400, { ok: false, erro: 'Esse serviço ultrapassa o horário de funcionamento. Escolha outro horário.' });
+    }
+
     const valorServico = Number(servicoSelecionado.preco) || 0;
     const valorAntecipado = solicitarPagamentoAntecipado
       ? Number((valorServico * PAGAMENTO_ANTECIPADO_PERCENTUAL / 100).toFixed(2))
@@ -136,7 +190,7 @@ module.exports = async function handler(req, res) {
       mensagem: solicitarPagamentoAntecipado
         ? 'Agendamento registrado e aguardando pagamento antecipado.'
         : 'Agendamento registrado com sucesso.',
-      tempoMedioAtendimentoMinutos: TEMPO_MEDIO_ATENDIMENTO_MINUTOS,
+      duracaoMinutos,
       pagamento: {
         solicitado: solicitarPagamentoAntecipado,
         percentual: PAGAMENTO_ANTECIPADO_PERCENTUAL,

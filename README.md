@@ -1,51 +1,62 @@
 # Barbearia Digital
 
-Template comercial premium para barbearias, desenvolvido em HTML5, CSS3 e JavaScript puro e preparado para publicação na Vercel.
+Sistema web comercial premium para barbearias, desenvolvido em HTML5, CSS3 e JavaScript puro, com backend serverless na Vercel e banco PostgreSQL no Neon.
 
 ## Estrutura
 
 - `index.html` — página principal, SEO e acessibilidade
-- `css/estilo.css` — identidade visual e layout base
-- `css/responsivo.css` — adaptações para mobile e tablet
-- `css/premium.css` — microinterações, acessibilidade e refinamentos visuais
-- `js/configuracao.js` — conteúdo completo que deve ser personalizado por cliente
-- `js/principal.js` — renderização e comportamento geral
-- `js/seo.js` — metadados e Schema.org de negócio local
-- `js/menu.js` — menu responsivo acessível
-- `js/galeria.js` — lightbox da galeria
-- `js/depoimentos.js` — carrossel de depoimentos
-- `favicon.svg` — identidade inicial do navegador
-- `manifest.webmanifest` — preparação para experiência instalável
-- `robots.txt` e `sitemap.xml` — base para indexação
-- `404.html` — página de erro personalizada
-- `vercel.json` — headers de segurança e cache
+- `css/` — identidade visual, responsividade e refinamentos premium
+- `js/configuracao.js` — conteúdo comercial personalizável
+- `js/comercial.js` — fluxo comercial e agendamento
+- `js/admin.js` + `admin.html` — painel administrativo protegido por token
+- `api/agendamentos.js` — criação e validação de agendamentos
+- `api/disponibilidade.js` — consulta de horários livres
+- `api/catalogo.js` — serviços e barbeiros ativos do banco
+- `api/admin.js` — agenda e operações administrativas protegidas
+- `api/pagamentos.js` — preparação do gateway de pagamento
+- `api/webhook-mercadopago.js` — webhook do Mercado Pago
 
-## Personalização comercial
+## Banco de dados
 
-Comece por `js/configuracao.js`. Ali estão centralizados nome, slogan, descrição, telefone, WhatsApp, e-mail, endereço, cidade, redes sociais, agendamento, mapa, SEO, serviços, preços, profissionais e galeria.
+O PostgreSQL no Neon contempla clientes, barbeiros, serviços e agendamentos, incluindo duração do serviço e proteção contra sobreposição de horários.
 
-A ideia é reutilizar o mesmo template para novos clientes alterando os dados, sem duplicar regras de interface.
+## Variáveis de ambiente
 
-## SEO e performance
+Configure na Vercel:
 
-O template possui meta tags, Open Graph, dados estruturados `BarberShop`, favicon, manifest, lazy loading de imagens, `decoding=async`, `content-visibility`, animações respeitando `prefers-reduced-motion`, headers de segurança e cache para Vercel.
+- `DATABASE_URL`
+- `ADMIN_API_TOKEN` — obrigatório para o painel administrativo; use um segredo forte
+- `MERCADO_PAGO_ACCESS_TOKEN`
+- `MERCADO_PAGO_WEBHOOK_SECRET`
 
-Antes de publicar cada cliente, substitua o domínio de exemplo do `sitemap.xml` e do `robots.txt` pelo domínio real. Também substitua as imagens demonstrativas por arquivos próprios, otimizados em WebP/AVIF quando possível.
+Nunca coloque valores reais no Git ou no frontend. O arquivo `.env.example` é apenas um modelo.
 
-## Supabase
+## Agendamento
 
-O repositório está preparado para uma futura camada de agendamento, clientes, barbeiros e painel administrativo com Supabase. O projeto Supabase `barbearia-digital` existente está atualmente inativo e não pôde ser restaurado porque a organização atingiu o limite de projetos ativos do plano gratuito. Por isso, nenhuma integração de banco foi simulada ou adicionada de forma incompleta.
+O cliente escolhe serviço, data e horário. O frontend consulta `/api/disponibilidade` e exibe somente horários livres. O backend valida novamente serviço, fuso horário, funcionamento, duração e conflitos antes de gravar.
 
-Quando houver um projeto Supabase ativo disponível, a próxima evolução recomendada é aplicar o schema com RLS e integrar o agendamento sem expor credenciais privadas no frontend.
+Se outro cliente ocupar o horário entre a consulta e o envio, a API retorna `409` e o frontend solicita uma nova seleção. Falhas reais de cadastro não são mascaradas como se fossem um agendamento confirmado.
 
-## Deploy na Vercel
+## Administração
 
-O projeto não precisa de build command ou variáveis de ambiente nesta versão. Importe o repositório `alair-code/barbearia-digital` na Vercel e use `main` para produção. A branch `manutencao` concentra as melhorias atuais até serem validadas.
+Abra `/admin.html` e informe o valor configurado em `ADMIN_API_TOKEN`. O token fica somente em `sessionStorage` durante a sessão do navegador e é enviado no cabeçalho `x-admin-token`.
 
-## Branch de manutenção
+O painel permite consultar agendamentos, filtrar por status e alterar entre `pendente`, `confirmado`, `concluido` e `cancelado`. Também exibe os serviços e barbeiros cadastrados no Neon.
 
-As melhorias premium desta rodada foram feitas exclusivamente na branch `manutencao`, criada a partir de `main`. Nenhuma alteração desta rodada foi enviada para `main` automaticamente.
+Este mecanismo é uma proteção administrativa por segredo de ambiente. Para uma operação com múltiplos usuários administrativos, auditoria e permissões por função, a próxima evolução recomendada é autenticação dedicada.
+
+## Pagamento
+
+A integração com Mercado Pago está preparada no backend, mas permanece desativada no fluxo comercial até ser configurada e validada em produção.
+
+## Deploy
+
+A branch `main` representa a base estável. A branch `manutencao` concentra as próximas melhorias e deve ser validada antes de nova integração em produção.
+
+## Personalização
+
+Comece por `js/configuracao.js` para identidade, contato e conteúdo comercial. Serviços e barbeiros ativos já são lidos do banco pelo catálogo e pelo painel administrativo.
 
 ## Tecnologias
 
-HTML5 + CSS3 + JavaScript puro. Sem framework e sem dependências de build, facilitando hospedagem, manutenção e replicação para novos clientes.
+HTML5 + CSS3 + JavaScript puro + Vercel Functions + Neon PostgreSQL.

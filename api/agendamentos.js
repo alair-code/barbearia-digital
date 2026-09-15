@@ -78,6 +78,25 @@ module.exports = async function handler(req, res) {
       return resposta(res, 400, { ok: false, erro: 'Serviço não encontrado ou indisponível.' });
     }
 
+    const servicoSelecionado = servicoRows[0];
+    const fim = new Date(dataInicio.getTime() + Number(servicoSelecionado.duracao_minutos) * 60000);
+
+    const conflitoRows = await sql`
+      select id
+      from agendamentos
+      where status in ('pendente', 'confirmado')
+        and tstzrange(inicio, fim, '[)') && tstzrange(${dataInicio.toISOString()}, ${fim.toISOString()}, '[)')
+      limit 1
+    `;
+
+    if (conflitoRows[0]) {
+      return resposta(res, 409, {
+        ok: false,
+        codigo: 'HORARIO_INDISPONIVEL',
+        erro: 'Este horário já está ocupado. Escolha outro horário.'
+      });
+    }
+
     const clienteRows = await sql`
       insert into clientes (nome, telefone, email)
       values (${nome}, ${telefone}, ${email})
@@ -86,9 +105,9 @@ module.exports = async function handler(req, res) {
 
     const clienteId = clienteRows[0].id;
     const agendamentoRows = await sql`
-      insert into agendamentos (cliente_id, servico_id, inicio, timezone, status, observacoes)
-      values (${clienteId}, ${servicoRows[0].id}, ${dataInicio.toISOString()}, ${timezone}, 'pendente', ${observacoes})
-      returning id, inicio, status
+      insert into agendamentos (cliente_id, servico_id, inicio, fim, timezone, status, observacoes)
+      values (${clienteId}, ${servicoSelecionado.id}, ${dataInicio.toISOString()}, ${fim.toISOString()}, ${timezone}, 'pendente', ${observacoes})
+      returning id, inicio, fim, status
     `;
 
     return resposta(res, 201, {
@@ -97,8 +116,12 @@ module.exports = async function handler(req, res) {
       agendamento: agendamentoRows[0]
     });
   } catch (erro) {
-    if (erro && erro.code === '23505') {
-      return resposta(res, 409, { ok: false, erro: 'Este horário já possui uma solicitação de agendamento.' });
+    if (erro && (erro.code === '23P01' || erro.code === '23505')) {
+      return resposta(res, 409, {
+        ok: false,
+        codigo: 'HORARIO_INDISPONIVEL',
+        erro: 'Este horário acabou de ser ocupado. Escolha outro horário.'
+      });
     }
 
     console.error('Falha ao criar agendamento:', erro);

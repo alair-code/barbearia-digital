@@ -2,9 +2,15 @@ const { neon } = require('@neondatabase/serverless');
 
 const sql = process.env.DATABASE_URL ? neon(process.env.DATABASE_URL) : null;
 const PAGAMENTO_ANTECIPADO_PERCENTUAL = 30;
-const INICIO_ATENDIMENTO = 9;
-const FIM_ATENDIMENTO = 19;
 const INTERVALO_MINUTOS = 15;
+const HORARIOS_ATENDIMENTO = {
+  1: { inicio: 9, fim: 19 },
+  2: { inicio: 9, fim: 19 },
+  3: { inicio: 9, fim: 19 },
+  4: { inicio: 9, fim: 19 },
+  5: { inicio: 9, fim: 20 },
+  6: { inicio: 8, fim: 18 }
+};
 
 function resposta(res, status, corpo) {
   res.status(status).json(corpo);
@@ -36,6 +42,20 @@ function partesHorario(data, timezone) {
   }
 }
 
+function horarioDoDia(data, timezone) {
+  try {
+    const dia = new Intl.DateTimeFormat('en-US', { timeZone: timezone, weekday: 'short' }).format(data);
+    const numeroDia = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 0 }[dia];
+    return HORARIOS_ATENDIMENTO[numeroDia] || null;
+  } catch {
+    return null;
+  }
+}
+
+function resumoHorarios() {
+  return 'Segunda a quinta: 09:00–19:00; sexta: 09:00–20:00; sábado: 08:00–18:00; domingo: fechado.';
+}
+
 module.exports = async function handler(req, res) {
   if (req.method === 'GET') {
     return resposta(res, 200, {
@@ -46,7 +66,7 @@ module.exports = async function handler(req, res) {
         opcional: true,
         percentual: PAGAMENTO_ANTECIPADO_PERCENTUAL
       },
-      horarioFuncionamento: '09:00–19:00',
+      horarioFuncionamento: resumoHorarios(),
       intervaloMinutos: INTERVALO_MINUTOS,
       mensagem: 'API de agendamentos disponível.'
     });
@@ -94,11 +114,12 @@ module.exports = async function handler(req, res) {
     }
 
     const horarioLocal = partesHorario(dataInicio, timezone);
-    if (!horarioLocal) {
-      return resposta(res, 400, { ok: false, erro: 'Fuso horário inválido.' });
+    const horarioDia = horarioDoDia(dataInicio, timezone);
+    if (!horarioLocal || !horarioDia) {
+      return resposta(res, 400, { ok: false, erro: 'Fuso horário ou dia de atendimento inválido.' });
     }
 
-    if (horarioLocal.hour < INICIO_ATENDIMENTO || horarioLocal.hour >= FIM_ATENDIMENTO || horarioLocal.minute % INTERVALO_MINUTOS !== 0 || horarioLocal.second !== 0) {
+    if (horarioLocal.hour < horarioDia.inicio || horarioLocal.hour >= horarioDia.fim || horarioLocal.minute % INTERVALO_MINUTOS !== 0 || horarioLocal.second !== 0) {
       return resposta(res, 400, { ok: false, erro: 'Escolha um horário dentro do funcionamento, em intervalos de 15 minutos.' });
     }
 
@@ -118,7 +139,7 @@ module.exports = async function handler(req, res) {
     const fim = new Date(dataInicio.getTime() + duracaoMinutos * 60000);
     const horarioFimLocal = partesHorario(fim, timezone);
 
-    if (!horarioFimLocal || horarioFimLocal.hour > FIM_ATENDIMENTO || (horarioFimLocal.hour === FIM_ATENDIMENTO && horarioFimLocal.minute > 0)) {
+    if (!horarioFimLocal || horarioFimLocal.hour > horarioDia.fim || (horarioFimLocal.hour === horarioDia.fim && horarioFimLocal.minute > 0)) {
       return resposta(res, 400, { ok: false, erro: 'Esse serviço ultrapassa o horário de funcionamento. Escolha outro horário.' });
     }
 

@@ -43,7 +43,7 @@ create table if not exists public.agendamentos (
 alter table public.agendamentos add column if not exists fim timestamptz;
 
 update public.agendamentos a
-set fim = a.inicio + make_interval(mins => s.duracao_minutos)
+set fim = a.inicio + make_interval(mins => s.duracao_minutos + 15)
 from public.servicos s
 where a.servico_id = s.id
   and a.fim is null;

@@ -6,54 +6,56 @@ Sistema web comercial premium para barbearias, desenvolvido em HTML5, CSS3 e Jav
 
 - `index.html` — página principal, SEO e acessibilidade
 - `css/` — identidade visual, responsividade e refinamentos premium
-- `js/configuracao.js` — conteúdo personalizável de cada cliente
-- `js/principal.js` — renderização e comportamento geral
-- `js/menu.js` — menu responsivo acessível
-- `js/galeria.js` — galeria e lightbox
-- `js/depoimentos.js` — depoimentos
+- `js/configuracao.js` — conteúdo comercial personalizável
 - `js/comercial.js` — fluxo comercial e agendamento
+- `js/admin.js` + `admin.html` — painel administrativo protegido por token
 - `api/agendamentos.js` — criação e validação de agendamentos
+- `api/disponibilidade.js` — consulta de horários livres
+- `api/catalogo.js` — serviços e barbeiros ativos do banco
+- `api/admin.js` — agenda e operações administrativas protegidas
 - `api/pagamentos.js` — preparação do gateway de pagamento
 - `api/webhook-mercadopago.js` — webhook do Mercado Pago
-- `neon/schema.sql` — estrutura do banco PostgreSQL
-- `.env.example` — variáveis de ambiente necessárias
-- `.gitignore` — proteção de arquivos e segredos locais
 
 ## Banco de dados
 
-O projeto usa PostgreSQL no Neon. O schema contempla clientes, barbeiros, serviços e agendamentos, incluindo duração do serviço, prevenção de sobreposição de horários e campos preparados para pagamentos.
-
-A duração do atendimento é definida pelo cadastro do serviço no banco. Os serviços iniciais utilizam 15 minutos, sem intervalo adicional entre clientes.
+O PostgreSQL no Neon contempla clientes, barbeiros, serviços e agendamentos, incluindo duração do serviço e proteção contra sobreposição de horários.
 
 ## Variáveis de ambiente
 
-Configure no ambiente de execução:
+Configure na Vercel:
 
 - `DATABASE_URL`
+- `ADMIN_API_TOKEN` — obrigatório para o painel administrativo; use um segredo forte
 - `MERCADO_PAGO_ACCESS_TOKEN`
 - `MERCADO_PAGO_WEBHOOK_SECRET`
 
-As credenciais privadas nunca devem ser colocadas no frontend ou versionadas no Git. Use `.env.example` apenas como modelo.
+Nunca coloque valores reais no Git ou no frontend. O arquivo `.env.example` é apenas um modelo.
 
 ## Agendamento
 
-O fluxo valida os dados do cliente, serviço e horário, verifica disponibilidade e grava o cliente e o agendamento no PostgreSQL. A duração utilizada no cálculo de término vem do serviço cadastrado no banco.
+O cliente escolhe serviço, data e horário. O frontend consulta `/api/disponibilidade` e exibe somente horários livres. O backend valida novamente serviço, fuso horário, funcionamento, duração e conflitos antes de gravar.
 
-O sistema também possui proteção no banco contra sobreposição de agendamentos ativos.
+Se outro cliente ocupar o horário entre a consulta e o envio, a API retorna `409` e o frontend solicita uma nova seleção. Falhas reais de cadastro não são mascaradas como se fossem um agendamento confirmado.
+
+## Administração
+
+Abra `/admin.html` e informe o valor configurado em `ADMIN_API_TOKEN`. O token fica somente em `sessionStorage` durante a sessão do navegador e é enviado no cabeçalho `x-admin-token`.
+
+O painel permite consultar agendamentos, filtrar por status e alterar entre `pendente`, `confirmado`, `concluido` e `cancelado`. Também exibe os serviços e barbeiros cadastrados no Neon.
+
+Este mecanismo é uma proteção administrativa por segredo de ambiente. Para uma operação com múltiplos usuários administrativos, auditoria e permissões por função, a próxima evolução recomendada é autenticação dedicada.
 
 ## Pagamento
 
-A integração com Mercado Pago está preparada no backend, mas permanece como etapa posterior do projeto. O fluxo atual de agendamento não depende da configuração do gateway para funcionar.
+A integração com Mercado Pago está preparada no backend, mas permanece desativada no fluxo comercial até ser configurada e validada em produção.
 
-## Deploy na Vercel
+## Deploy
 
-A branch `main` representa a base estável. A branch `manutencao` concentra as próximas melhorias e deve ser validada antes de qualquer nova integração em produção.
+A branch `main` representa a base estável. A branch `manutencao` concentra as próximas melhorias e deve ser validada antes de nova integração em produção.
 
-## Personalização comercial
+## Personalização
 
-Comece por `js/configuracao.js`. Ali estão centralizados nome, contato, endereço, redes sociais, serviços, preços, profissionais, galeria e demais dados que variam por cliente.
-
-A proposta é reutilizar a mesma base para novos clientes sem duplicar regras de interface.
+Comece por `js/configuracao.js` para identidade, contato e conteúdo comercial. Serviços e barbeiros ativos já são lidos do banco pelo catálogo e pelo painel administrativo.
 
 ## Tecnologias
 

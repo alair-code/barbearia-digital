@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://barbearia-digital.vercel.app/sitemap.xml

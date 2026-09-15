@@ -1,7 +1,6 @@
 const { neon } = require('@neondatabase/serverless');
 
 const sql = process.env.DATABASE_URL ? neon(process.env.DATABASE_URL) : null;
-const TEMPO_MEDIO_ATENDIMENTO_MINUTOS = 15;
 const PAGAMENTO_ANTECIPADO_PERCENTUAL = 30;
 
 function resposta(res, status, corpo) {
@@ -25,7 +24,6 @@ module.exports = async function handler(req, res) {
     return resposta(res, 200, {
       ok: true,
       bancoConfigurado: Boolean(process.env.DATABASE_URL),
-      tempoMedioAtendimentoMinutos: TEMPO_MEDIO_ATENDIMENTO_MINUTOS,
       pagamentoAntecipado: {
         disponivel: true,
         opcional: true,
@@ -88,7 +86,8 @@ module.exports = async function handler(req, res) {
     }
 
     const servicoSelecionado = servicoRows[0];
-    const fim = new Date(dataInicio.getTime() + TEMPO_MEDIO_ATENDIMENTO_MINUTOS * 60000);
+    const duracaoMinutos = Number(servicoSelecionado.duracao_minutos) || 15;
+    const fim = new Date(dataInicio.getTime() + duracaoMinutos * 60000);
     const valorServico = Number(servicoSelecionado.preco) || 0;
     const valorAntecipado = solicitarPagamentoAntecipado
       ? Number((valorServico * PAGAMENTO_ANTECIPADO_PERCENTUAL / 100).toFixed(2))
@@ -136,7 +135,7 @@ module.exports = async function handler(req, res) {
       mensagem: solicitarPagamentoAntecipado
         ? 'Agendamento registrado e aguardando pagamento antecipado.'
         : 'Agendamento registrado com sucesso.',
-      tempoMedioAtendimentoMinutos: TEMPO_MEDIO_ATENDIMENTO_MINUTOS,
+      duracaoMinutos,
       pagamento: {
         solicitado: solicitarPagamentoAntecipado,
         percentual: PAGAMENTO_ANTECIPADO_PERCENTUAL,

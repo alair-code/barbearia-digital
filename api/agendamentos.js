@@ -2,6 +2,9 @@ const { neon } = require('@neondatabase/serverless');
 
 const sql = process.env.DATABASE_URL ? neon(process.env.DATABASE_URL) : null;
 const PAGAMENTO_ANTECIPADO_PERCENTUAL = 30;
+const INICIO_ATENDIMENTO = 9;
+const FIM_ATENDIMENTO = 19;
+const INTERVALO_MINUTOS = 15;
 
 function resposta(res, status, corpo) {
   res.status(status).json(corpo);
@@ -29,6 +32,8 @@ module.exports = async function handler(req, res) {
         opcional: true,
         percentual: PAGAMENTO_ANTECIPADO_PERCENTUAL
       },
+      horarioFuncionamento: '09:00–19:00',
+      intervaloMinutos: INTERVALO_MINUTOS,
       mensagem: 'API de agendamentos disponível.'
     });
   }
@@ -74,6 +79,12 @@ module.exports = async function handler(req, res) {
       return resposta(res, 400, { ok: false, erro: 'O horário informado já passou.' });
     }
 
+    const hora = dataInicio.getHours();
+    const minuto = dataInicio.getMinutes();
+    if (hora < INICIO_ATENDIMENTO || hora >= FIM_ATENDIMENTO || minuto % INTERVALO_MINUTOS !== 0 || dataInicio.getSeconds() !== 0) {
+      return resposta(res, 400, { ok: false, erro: 'Escolha um horário dentro do funcionamento, em intervalos de 15 minutos.' });
+    }
+
     const servicoRows = await sql`
       select id, nome, duracao_minutos, preco
       from servicos
@@ -88,6 +99,13 @@ module.exports = async function handler(req, res) {
     const servicoSelecionado = servicoRows[0];
     const duracaoMinutos = Number(servicoSelecionado.duracao_minutos) || 15;
     const fim = new Date(dataInicio.getTime() + duracaoMinutos * 60000);
+    const limiteFim = new Date(dataInicio);
+    limiteFim.setHours(FIM_ATENDIMENTO, 0, 0, 0);
+
+    if (fim.getTime() > limiteFim.getTime()) {
+      return resposta(res, 400, { ok: false, erro: 'Esse serviço ultrapassa o horário de funcionamento. Escolha outro horário.' });
+    }
+
     const valorServico = Number(servicoSelecionado.preco) || 0;
     const valorAntecipado = solicitarPagamentoAntecipado
       ? Number((valorServico * PAGAMENTO_ANTECIPADO_PERCENTUAL / 100).toFixed(2))

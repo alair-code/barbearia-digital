@@ -10,6 +10,14 @@ function limpar(valor, limite = 500) {
   return typeof valor === 'string' ? valor.trim().slice(0, limite) : '';
 }
 
+function telefoneValido(valor) {
+  return /^\+?[0-9\s().-]{8,25}$/.test(valor);
+}
+
+function emailValido(valor) {
+  return !valor || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valor);
+}
+
 module.exports = async function handler(req, res) {
   if (req.method === 'GET') {
     return resposta(res, 200, {
@@ -42,6 +50,14 @@ module.exports = async function handler(req, res) {
       return resposta(res, 400, { ok: false, erro: 'Nome, telefone, serviço e horário são obrigatórios.' });
     }
 
+    if (!telefoneValido(telefone)) {
+      return resposta(res, 400, { ok: false, erro: 'Informe um telefone válido.' });
+    }
+
+    if (!emailValido(email)) {
+      return resposta(res, 400, { ok: false, erro: 'Informe um e-mail válido.' });
+    }
+
     const dataInicio = new Date(inicio);
     if (Number.isNaN(dataInicio.getTime())) {
       return resposta(res, 400, { ok: false, erro: 'Data e horário inválidos.' });
@@ -51,13 +67,6 @@ module.exports = async function handler(req, res) {
       return resposta(res, 400, { ok: false, erro: 'O horário informado já passou.' });
     }
 
-    const clienteRows = await sql`
-      insert into clientes (nome, telefone, email)
-      values (${nome}, ${telefone}, ${email})
-      returning id
-    `;
-
-    const clienteId = clienteRows[0].id;
     const servicoRows = await sql`
       select id, nome, duracao_minutos, preco
       from servicos
@@ -69,6 +78,13 @@ module.exports = async function handler(req, res) {
       return resposta(res, 400, { ok: false, erro: 'Serviço não encontrado ou indisponível.' });
     }
 
+    const clienteRows = await sql`
+      insert into clientes (nome, telefone, email)
+      values (${nome}, ${telefone}, ${email})
+      returning id
+    `;
+
+    const clienteId = clienteRows[0].id;
     const agendamentoRows = await sql`
       insert into agendamentos (cliente_id, servico_id, inicio, timezone, status, observacoes)
       values (${clienteId}, ${servicoRows[0].id}, ${dataInicio.toISOString()}, ${timezone}, 'pendente', ${observacoes})
@@ -77,6 +93,7 @@ module.exports = async function handler(req, res) {
 
     return resposta(res, 201, {
       ok: true,
+      mensagem: 'Agendamento registrado com sucesso.',
       agendamento: agendamentoRows[0]
     });
   } catch (erro) {

@@ -33,17 +33,6 @@ function iniciarComercial() {
     if (heading) heading.insertAdjacentElement('afterend', palco);
   }
 
-  const nav = document.querySelector('.navegacao');
-  if (nav && !document.querySelector('[data-nav-agendar]')) {
-    const a = document.createElement('a');
-    a.className = 'botao botao-destaque';
-    a.href = '#';
-    a.dataset.navAgendar = '1';
-    a.textContent = 'Agendar agora';
-    a.addEventListener('click', (e) => { e.preventDefault(); abrir(); });
-    nav.appendChild(a);
-  }
-
   async function carregarCatalogo() {
     try {
       const r = await fetch('/api/catalogo', { headers: { Accept: 'application/json' } });
@@ -147,7 +136,7 @@ function iniciarComercial() {
         } finally { botao.disabled = false; botao.textContent = 'Confirmar agendamento'; }
       });
     }
-    const select = modal.querySelector('[name="servico"]);
+    const select = modal.querySelector('[name="servico"]');
     if (servicoInicial && select) select.value = servicoInicial;
     const dataInput = modal.querySelector('[name="data"]');
     if (!dataInput.value) dataInput.value = new Date().toISOString().slice(0, 10);
@@ -156,7 +145,11 @@ function iniciarComercial() {
     modal.querySelector('input')?.focus();
   }
 
-  document.querySelectorAll('[data-link="agendamento"]').forEach((a) => { a.href = '#'; a.addEventListener('click', (e) => { e.preventDefault(); abrir(); }); });
+  document.querySelectorAll('[data-link="agendamento"]').forEach((a) => {
+    a.href = '#';
+    a.textContent = 'Agendar agora';
+    a.addEventListener('click', (e) => { e.preventDefault(); abrir(); });
+  });
   const contato = document.querySelector('.contato');
   if (contato && !contato.querySelector('.rodape-links')) { const links = document.createElement('div'); links.className = 'rodape-links'; links.innerHTML = '<a href="privacidade.html">Privacidade</a><a href="termos.html">Termos de uso</a>'; contato.appendChild(links); }
   carregarCatalogo();

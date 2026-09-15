@@ -1,9 +1,15 @@
 const { neon } = require('@neondatabase/serverless');
 
 const sql = process.env.DATABASE_URL ? neon(process.env.DATABASE_URL) : null;
-const INICIO_ATENDIMENTO = 9;
-const FIM_ATENDIMENTO = 19;
 const INTERVALO_MINUTOS = 15;
+const HORARIOS_ATENDIMENTO = {
+  1: { inicio: 9, fim: 19, descricao: 'Segunda-feira: 09:00–19:00' },
+  2: { inicio: 9, fim: 19, descricao: 'Terça-feira: 09:00–19:00' },
+  3: { inicio: 9, fim: 19, descricao: 'Quarta-feira: 09:00–19:00' },
+  4: { inicio: 9, fim: 19, descricao: 'Quinta-feira: 09:00–19:00' },
+  5: { inicio: 9, fim: 20, descricao: 'Sexta-feira: 09:00–20:00' },
+  6: { inicio: 8, fim: 18, descricao: 'Sábado: 08:00–18:00' }
+};
 
 function resposta(res, status, corpo) {
   res.status(status).json(corpo);
@@ -47,10 +53,19 @@ module.exports = async function handler(req, res) {
     }
 
     const duracao = Math.max(INTERVALO_MINUTOS, Number(servicoRows[0].duracao_minutos) || INTERVALO_MINUTOS);
-    const diaSemana = new Date(`${data}T12:00:00-03:00`).getDay();
+    const dataReferencia = new Date(`${data}T12:00:00-03:00`);
+    const diaSemana = dataReferencia.getDay();
+    const horarioDia = HORARIOS_ATENDIMENTO[diaSemana];
 
-    if (diaSemana === 0) {
-      return resposta(res, 200, { ok: true, data, servico: servicoRows[0].nome, duracaoMinutos: duracao, horarios: [] });
+    if (!horarioDia) {
+      return resposta(res, 200, {
+        ok: true,
+        data,
+        servico: servicoRows[0].nome,
+        duracaoMinutos: duracao,
+        horarioFuncionamento: 'Domingo: fechado',
+        horarios: []
+      });
     }
 
     const inicioDia = `${data}T00:00:00-03:00`;
@@ -66,8 +81,8 @@ module.exports = async function handler(req, res) {
 
     const horarios = [];
     const agora = Date.now();
-    const primeiro = INICIO_ATENDIMENTO * 60;
-    const ultimoInicio = FIM_ATENDIMENTO * 60 - duracao;
+    const primeiro = horarioDia.inicio * 60;
+    const ultimoInicio = horarioDia.fim * 60 - duracao;
 
     for (let minutos = primeiro; minutos <= ultimoInicio; minutos += INTERVALO_MINUTOS) {
       const hora = String(Math.floor(minutos / 60)).padStart(2, '0');
@@ -91,7 +106,7 @@ module.exports = async function handler(req, res) {
       data,
       servico: servicoRows[0].nome,
       duracaoMinutos: duracao,
-      horarioFuncionamento: `${String(INICIO_ATENDIMENTO).padStart(2, '0')}:00–${String(FIM_ATENDIMENTO).padStart(2, '0')}:00`,
+      horarioFuncionamento: horarioDia.descricao,
       horarios
     });
   } catch (erro) {

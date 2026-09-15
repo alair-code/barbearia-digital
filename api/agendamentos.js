@@ -1,7 +1,8 @@
 const { neon } = require('@neondatabase/serverless');
 
 const sql = process.env.DATABASE_URL ? neon(process.env.DATABASE_URL) : null;
-const INTERVALO_ENTRE_ATENDIMENTOS_MINUTOS = 15;
+const TEMPO_MEDIO_ATENDIMENTO_MINUTOS = 15;
+const PAGAMENTO_ANTECIPADO_PERCENTUAL = 30;
 
 function resposta(res, status, corpo) {
   res.status(status).json(corpo);
@@ -24,7 +25,12 @@ module.exports = async function handler(req, res) {
     return resposta(res, 200, {
       ok: true,
       bancoConfigurado: Boolean(process.env.DATABASE_URL),
-      intervaloEntreAtendimentosMinutos: INTERVALO_ENTRE_ATENDIMENTOS_MINUTOS,
+      tempoMedioAtendimentoMinutos: TEMPO_MEDIO_ATENDIMENTO_MINUTOS,
+      pagamentoAntecipado: {
+        disponivel: true,
+        opcional: true,
+        percentual: PAGAMENTO_ANTECIPADO_PERCENTUAL
+      },
       mensagem: 'API de agendamentos disponível.'
     });
   }
@@ -47,6 +53,7 @@ module.exports = async function handler(req, res) {
     const inicio = limpar(body.inicio, 40);
     const observacoes = limpar(body.observacoes, 1000) || null;
     const timezone = limpar(body.timezone, 80) || 'America/Sao_Paulo';
+    const solicitarPagamentoAntecipado = body.pagamentoAntecipado === true;
 
     if (!nome || nome.length < 2 || !telefone || !servico || !inicio) {
       return resposta(res, 400, { ok: false, erro: 'Nome, telefone, serviço e horário são obrigatórios.' });
@@ -81,10 +88,12 @@ module.exports = async function handler(req, res) {
     }
 
     const servicoSelecionado = servicoRows[0];
-    const fim = new Date(
-      dataInicio.getTime() +
-      (Number(servicoSelecionado.duracao_minutos) + INTERVALO_ENTRE_ATENDIMENTOS_MINUTOS) * 60000
-    );
+    const fim = new Date(dataInicio.getTime() + TEMPO_MEDIO_ATENDIMENTO_MINUTOS * 60000);
+    const valorServico = Number(servicoSelecionado.preco) || 0;
+    const valorAntecipado = solicitarPagamentoAntecipado
+      ? Number((valorServico * PAGAMENTO_ANTECIPADO_PERCENTUAL / 100).toFixed(2))
+      : 0;
+    const pagamentoStatus = solicitarPagamentoAntecipado ? 'aguardando_pagamento' : 'nao_solicitado';
 
     const conflitoRows = await sql`
       select id
@@ -110,15 +119,31 @@ module.exports = async function handler(req, res) {
 
     const clienteId = clienteRows[0].id;
     const agendamentoRows = await sql`
-      insert into agendamentos (cliente_id, servico_id, inicio, fim, timezone, status, observacoes)
-      values (${clienteId}, ${servicoSelecionado.id}, ${dataInicio.toISOString()}, ${fim.toISOString()}, ${timezone}, 'pendente', ${observacoes})
-      returning id, inicio, fim, status
+      insert into agendamentos (
+        cliente_id, servico_id, inicio, fim, timezone, status, observacoes,
+        pagamento_status, pagamento_percentual, pagamento_valor
+      )
+      values (
+        ${clienteId}, ${servicoSelecionado.id}, ${dataInicio.toISOString()}, ${fim.toISOString()},
+        ${timezone}, 'pendente', ${observacoes}, ${pagamentoStatus},
+        ${PAGAMENTO_ANTECIPADO_PERCENTUAL}, ${valorAntecipado}
+      )
+      returning id, inicio, fim, status, pagamento_status, pagamento_percentual, pagamento_valor
     `;
 
     return resposta(res, 201, {
       ok: true,
-      mensagem: 'Agendamento registrado com sucesso.',
-      intervaloEntreAtendimentosMinutos: INTERVALO_ENTRE_ATENDIMENTOS_MINUTOS,
+      mensagem: solicitarPagamentoAntecipado
+        ? 'Agendamento registrado e aguardando pagamento antecipado.'
+        : 'Agendamento registrado com sucesso.',
+      tempoMedioAtendimentoMinutos: TEMPO_MEDIO_ATENDIMENTO_MINUTOS,
+      pagamento: {
+        solicitado: solicitarPagamentoAntecipado,
+        percentual: PAGAMENTO_ANTECIPADO_PERCENTUAL,
+        valor: valorAntecipado,
+        status: pagamentoStatus,
+        integrado: false
+      },
       agendamento: agendamentoRows[0]
     });
   } catch (erro) {

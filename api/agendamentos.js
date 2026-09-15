@@ -22,6 +22,20 @@ function emailValido(valor) {
   return !valor || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valor);
 }
 
+function partesHorario(data, timezone) {
+  try {
+    const partes = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      hour12: false,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit'
+    }).formatToParts(data);
+    return Object.fromEntries(partes.filter((p) => p.type !== 'literal').map((p) => [p.type, Number(p.value)]));
+  } catch {
+    return null;
+  }
+}
+
 module.exports = async function handler(req, res) {
   if (req.method === 'GET') {
     return resposta(res, 200, {
@@ -79,9 +93,12 @@ module.exports = async function handler(req, res) {
       return resposta(res, 400, { ok: false, erro: 'O horário informado já passou.' });
     }
 
-    const hora = dataInicio.getHours();
-    const minuto = dataInicio.getMinutes();
-    if (hora < INICIO_ATENDIMENTO || hora >= FIM_ATENDIMENTO || minuto % INTERVALO_MINUTOS !== 0 || dataInicio.getSeconds() !== 0) {
+    const horarioLocal = partesHorario(dataInicio, timezone);
+    if (!horarioLocal) {
+      return resposta(res, 400, { ok: false, erro: 'Fuso horário inválido.' });
+    }
+
+    if (horarioLocal.hour < INICIO_ATENDIMENTO || horarioLocal.hour >= FIM_ATENDIMENTO || horarioLocal.minute % INTERVALO_MINUTOS !== 0 || horarioLocal.second !== 0) {
       return resposta(res, 400, { ok: false, erro: 'Escolha um horário dentro do funcionamento, em intervalos de 15 minutos.' });
     }
 
@@ -99,10 +116,9 @@ module.exports = async function handler(req, res) {
     const servicoSelecionado = servicoRows[0];
     const duracaoMinutos = Number(servicoSelecionado.duracao_minutos) || 15;
     const fim = new Date(dataInicio.getTime() + duracaoMinutos * 60000);
-    const limiteFim = new Date(dataInicio);
-    limiteFim.setHours(FIM_ATENDIMENTO, 0, 0, 0);
+    const horarioFimLocal = partesHorario(fim, timezone);
 
-    if (fim.getTime() > limiteFim.getTime()) {
+    if (!horarioFimLocal || horarioFimLocal.hour > FIM_ATENDIMENTO || (horarioFimLocal.hour === FIM_ATENDIMENTO && horarioFimLocal.minute > 0)) {
       return resposta(res, 400, { ok: false, erro: 'Esse serviço ultrapassa o horário de funcionamento. Escolha outro horário.' });
     }
 

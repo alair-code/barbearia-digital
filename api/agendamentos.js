@@ -1,6 +1,7 @@
 const { neon } = require('@neondatabase/serverless');
 
 const sql = process.env.DATABASE_URL ? neon(process.env.DATABASE_URL) : null;
+const INTERVALO_ENTRE_ATENDIMENTOS_MINUTOS = 15;
 
 function resposta(res, status, corpo) {
   res.status(status).json(corpo);
@@ -23,6 +24,7 @@ module.exports = async function handler(req, res) {
     return resposta(res, 200, {
       ok: true,
       bancoConfigurado: Boolean(process.env.DATABASE_URL),
+      intervaloEntreAtendimentosMinutos: INTERVALO_ENTRE_ATENDIMENTOS_MINUTOS,
       mensagem: 'API de agendamentos disponível.'
     });
   }
@@ -79,7 +81,10 @@ module.exports = async function handler(req, res) {
     }
 
     const servicoSelecionado = servicoRows[0];
-    const fim = new Date(dataInicio.getTime() + Number(servicoSelecionado.duracao_minutos) * 60000);
+    const fim = new Date(
+      dataInicio.getTime() +
+      (Number(servicoSelecionado.duracao_minutos) + INTERVALO_ENTRE_ATENDIMENTOS_MINUTOS) * 60000
+    );
 
     const conflitoRows = await sql`
       select id
@@ -113,6 +118,7 @@ module.exports = async function handler(req, res) {
     return resposta(res, 201, {
       ok: true,
       mensagem: 'Agendamento registrado com sucesso.',
+      intervaloEntreAtendimentosMinutos: INTERVALO_ENTRE_ATENDIMENTOS_MINUTOS,
       agendamento: agendamentoRows[0]
     });
   } catch (erro) {

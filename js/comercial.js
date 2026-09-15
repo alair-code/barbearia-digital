@@ -1,7 +1,8 @@
 function iniciarComercial() {
   const c = window.configuracaoBarbearia || {};
   const $ = (s) => document.querySelector(s);
-  const pagamento = c.pagamento || { antecipadoOpcional: true, percentual: 30, provedor: 'mercado_pago' };
+  const pagamento = c.pagamento || { antecipadoOpcional: false, percentual: 30, provedor: 'mercado_pago' };
+  const pagamentoDisponivel = pagamento.antecipadoOpcional === true;
 
   const servicos = [...document.querySelectorAll('#lista-servicos .servico')];
   servicos.forEach((card, i) => {
@@ -52,7 +53,7 @@ function iniciarComercial() {
     }
 
     const pagamentoPix = resultado.pagamento || {};
-    modal.innerHTML = `<div class="form-agendamento pagamento-pix"><button type="button" class="fechar-agendamento" aria-label="Fechar">Fechar ×</button><h3>Pagamento via Pix</h3><p>${nome}, sua reserva foi criada. Pague ${pagamentoPix.valor ? `R$ ${Number(pagamentoPix.valor).toFixed(2).replace('.', ',')}` : 'o valor indicado'} para confirmar o horário.</p>${pagamentoPix.qrCodeBase64 ? `<img class="pix-qr" src="data:image/png;base64,${pagamentoPix.qrCodeBase64}" alt="QR Code para pagamento Pix">` : ''}<label class="pix-copia-label">Pix Copia e Cola<input id="pix-copia-cola" value="${pagamentoPix.qrCode || ''}" readonly></label><div class="form-acoes"><button type="button" class="botao botao-destaque" id="copiar-pix">Copiar Pix</button>${pagamentoPix.ticketUrl ? `<a class="botao" href="${pagamentoPix.ticketUrl}" target="_blank" rel="noopener">Abrir pagamento</a>` : ''}</div><small>Após o pagamento, o Mercado Pago notificará o sistema automaticamente. Não feche a página se quiser acompanhar a confirmação.</small></div>`;
+    modal.innerHTML = `<div class="form-agendamento pagamento-pix"><button type="button" class="fechar-agendamento" aria-label="Fechar">Fechar ×</button><h3>Pagamento via Pix</h3><p>${nome}, sua reserva foi criada. Pague ${pagamentoPix.valor ? `R$ ${Number(pagamentoPix.valor).toFixed(2).replace('.', ',')}` : 'o valor indicado'} para confirmar o horário.</p>${pagamentoPix.qrCodeBase64 ? `<img class="pix-qr" src="data:image/png;base64,${pagamentoPix.qrCodeBase64}" alt="QR Code para pagamento Pix">` : ''}<label class="pix-copia-label">Pix Copia e Cola<input id="pix-copia-cola" value="${pagamentoPix.qrCode || ''}" readonly></label><div class="form-acoes"><button type="button" class="botao botao-destaque" id="copiar-pix">Copiar Pix</button>${pagamentoPix.ticketUrl ? `<a class="botao" href="${pagamentoPix.ticketUrl}" target="_blank" rel="noopener">Abrir pagamento</a>` : ''}</div><small>Após o pagamento, o Mercado Pago notificará o sistema automaticamente.</small></div>`;
     modal.classList.add('aberto');
     modal.querySelector('.fechar-agendamento')?.addEventListener('click', () => modal.classList.remove('aberto'));
     modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('aberto'); }, { once: true });
@@ -76,12 +77,18 @@ function iniciarComercial() {
       modal = document.createElement('div');
       modal.id = 'modal-agendamento';
       modal.className = 'modal-agendamento';
-      modal.innerHTML = `<form class="form-agendamento" id="form-agendamento"><button type="button" class="fechar-agendamento" aria-label="Fechar">Fechar ×</button><h3>Agende seu atendimento</h3><p>Sua solicitação será registrada no sistema. Você pode pagar 30% antecipado via Pix ou pagar no atendimento.</p><div class="form-grid"><label>Nome<input name="nome" required autocomplete="name" placeholder="Seu nome"></label><label>E-mail<input name="email" type="email" required autocomplete="email" placeholder="voce@email.com"></label><label>Telefone<input name="telefone" required autocomplete="tel" placeholder="(00) 00000-0000"></label><label>Serviço<select name="servico" required>${(c.servicos || []).map((s) => `<option value="${s.nome}">${s.nome}</option>`).join('')}</select></label><label>Data preferida<input type="date" name="data" required></label><label>Horário preferido<input type="time" name="hora" required></label><label>Pagamento<select name="pagamentoAntecipado"><option value="nao">Não, pagar no atendimento</option><option value="sim">Sim, pagar ${pagamento.percentual || 30}% antecipado via Pix</option></select></label><label>Observação<textarea name="observacao" placeholder="Alguma preferência? (opcional)"></textarea></label></div><div class="aviso-pagamento">Pagamento online protegido pelo Mercado Pago. O sistema só confirma o agendamento após receber a confirmação do gateway.</div><div class="form-acoes"><button type="button" class="fechar-agendamento">Cancelar</button><button class="botao botao-destaque" type="submit">Registrar e continuar</button></div></form>`;
+      const campoPagamento = pagamentoDisponivel
+        ? `<label>Pagamento<select name="pagamentoAntecipado"><option value="nao">Não, pagar no atendimento</option><option value="sim">Sim, pagar ${pagamento.percentual || 30}% antecipado via Pix</option></select></label>`
+        : '';
+      const avisoPagamento = pagamentoDisponivel
+        ? `<div class="aviso-pagamento">Pagamento online protegido pelo Mercado Pago. O sistema só confirma o agendamento após receber a confirmação do gateway.</div>`
+        : `<div class="aviso-pagamento">Pagamento no atendimento. O agendamento será registrado e você receberá as orientações pelo WhatsApp.</div>`;
+      modal.innerHTML = `<form class="form-agendamento" id="form-agendamento"><button type="button" class="fechar-agendamento" aria-label="Fechar">Fechar ×</button><h3>Agende seu atendimento</h3><p>Sua solicitação será registrada no sistema e encaminhada para atendimento.</p><div class="form-grid"><label>Nome<input name="nome" required autocomplete="name" placeholder="Seu nome"></label><label>E-mail<input name="email" type="email" autocomplete="email" placeholder="voce@email.com"></label><label>Telefone<input name="telefone" required autocomplete="tel" placeholder="(00) 00000-0000"></label><label>Serviço<select name="servico" required>${(c.servicos || []).map((s) => `<option value="${s.nome}">${s.nome}</option>`).join('')}</select></label><label>Data preferida<input type="date" name="data" required></label><label>Horário preferido<input type="time" name="hora" required></label>${campoPagamento}<label>Observação<textarea name="observacao" placeholder="Alguma preferência? (opcional)"></textarea></div>${avisoPagamento}<div class="form-acoes"><button type="button" class="fechar-agendamento">Cancelar</button><button class="botao botao-destaque" type="submit">Confirmar agendamento</button></div></form>`;
       document.body.appendChild(modal);
       modal.addEventListener('click', (e) => { if (e.target === modal || e.target.closest('.fechar-agendamento')) modal.classList.remove('aberto'); });
-      modal.querySelector('[name="pagamentoAntecipado"]').addEventListener('change', (e) => {
+      modal.querySelector('[name="pagamentoAntecipado"]')?.addEventListener('change', (e) => {
         const email = modal.querySelector('[name="email"]');
-        email.required = e.target.value === 'sim';
+        if (email) email.required = e.target.value === 'sim';
       });
       modal.querySelector('form').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -91,7 +98,7 @@ function iniciarComercial() {
         const data = dados.get('data');
         const hora = dados.get('hora');
         const inicio = new Date(`${data}T${hora}:00`);
-        const querPagamento = dados.get('pagamentoAntecipado') === 'sim';
+        const querPagamento = pagamentoDisponivel && dados.get('pagamentoAntecipado') === 'sim';
         const payload = {
           nome: dados.get('nome'),
           email: dados.get('email'),
@@ -129,12 +136,12 @@ function iniciarComercial() {
           modal.classList.remove('aberto');
           form.reset();
         } catch (erro) {
-          const texto = `Olá! Meu nome é ${payload.nome}. Quero agendar ${payload.servico} para ${data} às ${hora}.${querPagamento ? ` Também solicitei o pagamento de ${pagamento.percentual || 30}% antecipado.` : ''}${payload.observacoes ? ` Observação: ${payload.observacoes}` : ''}`;
+          const texto = `Olá! Meu nome é ${payload.nome}. Quero agendar ${payload.servico} para ${data} às ${hora}.${payload.observacoes ? ` Observação: ${payload.observacoes}` : ''}`;
           window.open(`https://wa.me/${c.whatsapp}?text=${encodeURIComponent(texto)}`, '_blank', 'noopener');
           alert(`O WhatsApp foi aberto para não perder sua solicitação. O registro automático não foi concluído: ${erro.message}`);
         } finally {
           botao.disabled = false;
-          botao.textContent = 'Registrar e continuar';
+          botao.textContent = 'Confirmar agendamento';
         }
       });
     }

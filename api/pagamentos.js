@@ -81,33 +81,34 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    const valor = Number(agendamento.pagamento_valor).toFixed(2);
-    const referencia = `barbearia-${agendamento.id}`.slice(0, 64);
-    const idempotencyKey = crypto.randomUUID();
+const valor = Number(agendamento.pagamento_valor).toFixed(2);
+     const valorNumerico = Number(valor);
+     const referencia = `barbearia-${agendamento.id}`.slice(0, 64);
+     const idempotencyKey = crypto.randomUUID();
 
-    const mpResponse = await fetch(MERCADO_PAGO_URL, {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.MERCADO_PAGO_ACCESS_TOKEN}`,
-        'X-Idempotency-Key': idempotencyKey
-      },
-      body: JSON.stringify({
-        type: 'online',
-        total_amount: valor,
-        external_reference: referencia,
-        processing_mode: 'automatic',
-        transactions: {
-          payments: [{
-            amount: valor,
-            payment_method: { id: 'pix', type: 'bank_transfer' },
-            expiration_time: EXPIRACAO_PIX
-          }]
-        },
-        payer: { email }
-      })
-    });
+     const mpResponse = await fetch(MERCADO_PAGO_URL, {
+       method: 'POST',
+       headers: {
+         Accept: 'application/json',
+         'Content-Type': 'application/json',
+         Authorization: `Bearer ${process.env.MERCADO_PAGO_ACCESS_TOKEN}`,
+         'X-Idempotency-Key': idempotencyKey
+       },
+       body: JSON.stringify({
+         type: 'online',
+         total_amount: valorNumerico,
+         external_reference: referencia,
+         processing_mode: 'automatic',
+         transactions: {
+           payments: [{
+             amount: valorNumerico,
+             payment_method: { id: 'pix', type: 'bank_transfer' },
+             expiration_time: EXPIRACAO_PIX
+           }]
+         },
+         payer: { email }
+       })
+     });
 
     const mpData = await mpResponse.json().catch(() => ({}));
     if (!mpResponse.ok) {

@@ -87,9 +87,9 @@ module.exports = async function handler(req, res) {
       return resposta(res, 400, { ok: false, erro: 'Serviço não encontrado ou indisponível.' });
     }
 
-    const servicoSelecionado = servicoRows[0];
-    const fim = new Date(dataInicio.getTime() + TEMPO_MEDIO_ATENDIMENTO_MINUTOS * 60000);
-    const valorServico = Number(servicoSelecionado.preco) || 0;
+const servicoSelecionado = servicoRows[0];
+     const fim = new Date(dataInicio.getTime() + servicoSelecionado.duracao_minutos * 60000);
+     const valorServico = Number(servicoSelecionado.preco) || 0;
     const valorAntecipado = solicitarPagamentoAntecipado
       ? Number((valorServico * PAGAMENTO_ANTECIPADO_PERCENTUAL / 100).toFixed(2))
       : 0;
